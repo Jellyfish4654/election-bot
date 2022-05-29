@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -25,20 +27,113 @@ type Credentials struct {
 }
 
 func handle_start_appliction(client *http.Client) {
+	// sanity check
+	if _, err := os.Stat("state/application.txt"); err == nil {
+		fmt.Println("`state/application.txt' already exists, meaning you've already created the application form! To reset the process, delete the `state' folder.")
+		os.Exit(1)
+	}
+
 	service, err := forms.NewService(context.Background(), option.WithHTTPClient(client))
 	if err != nil {
 		panic(err)
 	}
+
+	form, err := service.Forms.Create(&forms.Form{
+		Info: &forms.Info{
+			Title:         electionConfig.Name + " Application",
+			DocumentTitle: electionConfig.Name + " Application",
+		},
+	}).Do()
+	if err != nil {
+		panic(err)
+	}
+
+	positionOptions := make([]*forms.Option, 0)
+	for _, position := range electionConfig.Positions {
+		positionOptions = append(positionOptions, &forms.Option{
+			Value: position.Name,
+		})
+	}
+	formRequests := []*forms.Request{{
+		CreateItem: &forms.CreateItemRequest{
+			Item: &forms.Item{
+				Title:       "Board positions you'd like to be considered for",
+				Description: "Select all positions that you would be willing and able to fulfill. You will be considered for them in the order they appear.",
+				QuestionItem: &forms.QuestionItem{
+					Question: &forms.Question{
+						ChoiceQuestion: &forms.ChoiceQuestion{
+							Options: positionOptions,
+							Type:    "CHECKBOX",
+						},
+						Required: true,
+					},
+				},
+			},
+			Location: &forms.Location{Index: 0, ForceSendFields: []string{"Index"}},
+		},
+	}, {
+		UpdateFormInfo: &forms.UpdateFormInfoRequest{
+			Info: &forms.Info{
+				Description:   electionConfig.ApplicationDescription,
+				Title:         electionConfig.Name + " Application",
+				DocumentTitle: electionConfig.Name + " Application",
+			},
+			UpdateMask: "*",
+		},
+	}}
+
+	_, err = service.Forms.BatchUpdate(form.FormId, &forms.BatchUpdateFormRequest{Requests: formRequests}).Do()
+	if err != nil {
+		panic(err)
+	}
+
+	formEditURL := "https://docs.google.com/forms/d/" + form.FormId + "/edit"
+
+	// make the election administrator make some changes
+message:
+	fmt.Println("")
+	fmt.Println("Form URL: " + formEditURL)
+	fmt.Println("At this point (since Google is kinda poopy and doesn't have a complete Forms API)\n\t - Turn on 'Collect email addresses'\n\t - Turn on 'Allow response editing'\n\t - Turn on 'Limit to 1 response'\n\t - Link a spreadsheet & make that spreadsheet publicly viewable")
+	fmt.Print("When you are done, press Enter:")
+	fmt.Scanf("%s\n")
+
+	form, err = service.Forms.Get(form.FormId).Do()
+	if err != nil {
+		panic(err)
+	}
+
+	if form.LinkedSheetId == "" {
+		fmt.Println("You forgot to link a spreadsheet! I'll give you another chance.")
+		time.Sleep(1 * time.Second)
+		goto message
+	}
+	formViewURL := form.ResponderUri
+
+	sendWebhook("<@&" + fmt.Sprint(discordConfig.RoleID) + "> Candidacy applications for the " + electionConfig.Name + " are now open! Please fill out this form before the deadline: " + formViewURL +
+		".\n\n**Make sure you submit the form while logged in to one of the following email addresses:**\n```" + strings.Join(eligibleApplicants, "\n") + "\n```")
+	sendWebhook("Application results are updated live at https://docs.google.com/spreadsheets/d/" + form.LinkedSheetId + ".")
+
+	os.Mkdir("state", 0700)
+	f, err := os.Create("state/application.txt")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	io.WriteString(f, form.FormId)
+
+	fmt.Println("You're all set!")
 }
 
 func main() {
 	// flag parsing
 	if len(os.Args) < 2 || os.Args[1] == "--help" || os.Args[1] == "-h" {
 		fmt.Fprintf(os.Stderr, "usage: %s [ACTION] [OPTIONS...]\n\tpossible actions: start-application, start-vote, end-vote\n", os.Args[0])
+		os.Exit(2)
 	}
 	subcommand := os.Args[1]
 	if subcommand != "start-application" && subcommand != "start-vote" && subcommand != "end-vote" {
 		fmt.Fprintln(os.Stderr, "invalid action. type "+os.Args[0]+" --help for more information")
+		os.Exit(2)
 	}
 
 	// credentials
@@ -76,22 +171,25 @@ func main() {
 	r.HandleFunc("/redirect", func(w http.ResponseWriter, req *http.Request) {
 		q := req.URL.Query()
 		if state == q.Get("state") {
-			tok, err := config.Exchange(oauth2.NoContext, q.Get("code"))
+			tok, err := config.Exchange(context.Background(), q.Get("code"))
 			if err != nil {
 				panic(err)
 			}
-			client := config.Client(oauth2.NoContext, tok)
+			client := config.Client(context.Background(), tok)
 
 			switch subcommand {
 			case "start-application":
-				handle_start_appliction(client)
+				go handle_start_appliction(client)
+				io.WriteString(w, "Authorized! Return to your terminal please :)")
 			case "start-vote":
+				panic("unimplemented")
 			case "end-vote":
+				panic("unimplemented")
 			}
 		}
 	})
 
-	r.Handle("/auth", http.RedirectHandler(auth_url, 307))
+	r.Handle("/auth", http.RedirectHandler(auth_url, http.StatusTemporaryRedirect))
 
 	http.Handle("/", r)
 	http.ListenAndServe("localhost:4444", nil)

@@ -1,4 +1,5 @@
 creds.json
 config/applicants.txt
 config/voters.txt
+config/discord.json
 go.sum

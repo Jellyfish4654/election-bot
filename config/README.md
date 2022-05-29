@@ -5,3 +5,6 @@ Specifically, it contains:
     in this document will be able to vote.
  - `applicants.txt` - a list of email addresses, for people that are eligible to run for election
  - `positions.json` - names + descriptions of election positions, as well as overall description
+ - `discord.json` - a JSON object with fields:
+    - `webhook`, string - discord webhook URL
+    - `role_id`, number - the ID of the Robotics role

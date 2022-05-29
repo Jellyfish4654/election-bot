@@ -1,0 +1,25 @@
+{
+    "name": "2022 Jellyfish Election",
+    "application_description": "When selecting the positions you wish to run for, keep in mind the requirements of the board position you are applying for. Please do not apply for positions you would not be comfortable carrying out. Requirements can be found in the club constitution, which should be publicly available in the team folder.",
+    "vote_description": "These elections will be determined using approval voting, which is superior to first-past-the-post. Rather than vote for your favorite candidate, vote for all candidates that would be suitable for a position. You may vote for any number of candidates. The candidate who receives the most votes for each position wins.\n\nWhen voting, consider each candidate's ability to carry out the responsibilities of a position, shown on this form.\n\nYour email address will be collected to ensure all voters are members of the team; all ballots will remain confidential.",
+
+    "positions": [{
+        "name": "Build President",
+        "description": "The build president will be responsible for overseeing and working with the build team throughout the entire engineering design process, which includes brainstorming, prototyping, constructing, and testing. Therefore, the build president should have a good understanding of how the robot should be built (i.e. engineering principles) as well as technical skills necessary in the design process (e.g. CAD)."
+    }, {
+        "name": "Administrative President",
+        "description": "The administrative president will be responsible for running outreach programs and making sure the team runs smoothly. Therefore, this president must be well-organized and have the skills necessary to interface with the team, school administration, parents, and other FTC teams. This president must also ensure that the club runs smoothly, guiding the team towards a consensus on major decisions in a timely manner."
+    }, {
+        "name": "Secretary",
+        "description": "The secretary is responsible for maintaining the Engineering Portfolio and Notebook and for acting as an administrative assistant to the team. Because of their attendance and notebook responsibilities, the secretary should be someone that is well-organized and consistently shows up to meetings."
+    }, {
+        "name": "Treasurer",
+        "description": "Carrying out the role of managing the team's money, the treasurer oversees all facets of team finance, including making purchases organizing fundraisers, and managing sponsors."
+    }, {
+        "name": "Programming Officer",
+        "description": "The programming officer oversees the programming team, which is responsible for writing the robot's code. The programming officer should have experience with software engineering and have adaquete knowledge of mathematical concepts that are relevant in control theory."
+    }, {
+        "name": "Relations Officer",
+        "description": "The relations officer is responsible for communicating with and learning from other FTC teams, and for maintaing a social media presence."
+    }]
+}
