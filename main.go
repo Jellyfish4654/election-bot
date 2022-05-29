@@ -58,7 +58,7 @@ func handle_start_appliction(client *http.Client) {
 		CreateItem: &forms.CreateItemRequest{
 			Item: &forms.Item{
 				Title:       "Name",
-				Description: "First name required. Last name optional.",
+				Description: "Full name please.",
 				QuestionItem: &forms.QuestionItem{
 					Question: &forms.Question{
 						TextQuestion:    &forms.TextQuestion{},
