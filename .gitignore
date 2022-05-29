@@ -3,3 +3,4 @@ config/applicants.txt
 config/voters.txt
 config/discord.json
 go.sum
+config/discord*.json

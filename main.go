@@ -57,8 +57,23 @@ func handle_start_appliction(client *http.Client) {
 	formRequests := []*forms.Request{{
 		CreateItem: &forms.CreateItemRequest{
 			Item: &forms.Item{
-				Title:       "Board positions you'd like to be considered for",
-				Description: "Select all positions that you would be willing and able to fulfill. You will be considered for them in the order they appear.",
+				Title:       "Name",
+				Description: "First name required. Last name optional.",
+				QuestionItem: &forms.QuestionItem{
+					Question: &forms.Question{
+						TextQuestion:    &forms.TextQuestion{},
+						Required:        true,
+						ForceSendFields: []string{"TextQuestion"},
+					},
+				},
+			},
+			Location: &forms.Location{Index: 0, ForceSendFields: []string{"Index"}},
+		},
+	}, {
+		CreateItem: &forms.CreateItemRequest{
+			Item: &forms.Item{
+				Title:       "Positions",
+				Description: "Select all positions that you would be willing and able to fulfill. You may select multiple. You will be considered for them in the order they appear.",
 				QuestionItem: &forms.QuestionItem{
 					Question: &forms.Question{
 						ChoiceQuestion: &forms.ChoiceQuestion{
@@ -69,7 +84,7 @@ func handle_start_appliction(client *http.Client) {
 					},
 				},
 			},
-			Location: &forms.Location{Index: 0, ForceSendFields: []string{"Index"}},
+			Location: &forms.Location{Index: 1, ForceSendFields: []string{"Index"}},
 		},
 	}, {
 		UpdateFormInfo: &forms.UpdateFormInfoRequest{
@@ -109,8 +124,9 @@ message:
 	}
 	formViewURL := form.ResponderUri
 
-	sendWebhook("<@&" + fmt.Sprint(discordConfig.RoleID) + "> Candidacy applications for the " + electionConfig.Name + " are now open! Please fill out this form before the deadline: " + formViewURL +
-		".\n\n**Make sure you submit the form while logged in to one of the following email addresses:**\n```" + strings.Join(eligibleApplicants, "\n") + "\n```")
+	sendWebhook("<@&" + fmt.Sprint(discordConfig.RoleID) + "> Candidacy applications for the " + electionConfig.Name + " are now open! Please fill out this form before the deadline: " + formViewURL + ".\n\n" +
+		"As a reminder, **bribery and extortion are grounds for your candidacy eligibility to be revoked**. This means no personal promises, goods, money, services, etc in exchange for votes or even an implication of exchange for votes.\n\n" +
+		"Make sure you enter one of the following email addresses into the \"Email\" field. **Entering an unlisted email may result in your candidacy not being registered.**\n```" + strings.Join(eligibleApplicants, "\n") + "\n```")
 	sendWebhook("Application results are updated live at https://docs.google.com/spreadsheets/d/" + form.LinkedSheetId + ".")
 
 	os.Mkdir("state", 0700)
@@ -122,6 +138,7 @@ message:
 	io.WriteString(f, form.FormId)
 
 	fmt.Println("You're all set!")
+	os.Exit(0)
 }
 
 func main() {
