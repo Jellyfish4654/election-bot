@@ -125,6 +125,7 @@ message:
 	formViewURL := form.ResponderUri
 
 	sendWebhook("<@&" + fmt.Sprint(discordConfig.RoleID) + "> Candidacy applications for the " + electionConfig.Name + " are now open! Please fill out this form before the deadline: " + formViewURL + ". Before you apply, keep in mind the requirements of the board position that you are applying for.\n\n" +
+		"This form can be edited anytime before the application deadline.\n\n" +
 		"As a reminder, **bribery and extortion are grounds for your candidacy eligibility to be revoked**. This means no personal promises, goods, money, services, etc in exchange for votes or even an implication of exchange for votes.\n\n" +
 		"Make sure you enter one of the following email addresses into the \"Email\" field. **Entering an unlisted email may result in your candidacy not being registered.**\n```" + strings.Join(eligibleApplicants, "\n") + "\n```")
 	sendWebhook("Application results are updated live at https://docs.google.com/spreadsheets/d/" + form.LinkedSheetId + ".")

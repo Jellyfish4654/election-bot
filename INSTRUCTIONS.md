@@ -1,2 +1,1 @@
-
-## 1. Set up cloud
+## 1. Set up Google Cloud
