@@ -26,6 +26,197 @@ type Credentials struct {
 	RedirectURIs []string `json:"redirect_uris"`
 }
 
+func handle_start_vote(client *http.Client) {
+	if _, err := os.Stat("state/ballot.txt"); err == nil {
+		fmt.Println("`state/ballot.txt` already exists, meaning voting has already started!")
+		os.Exit(1)
+	}
+
+	var applicationID string
+	{
+		applicationIdBytes, err := os.ReadFile("state/application.txt")
+		if err != nil {
+			fmt.Println("`state/application.txt' does not exist, meaning you haven't opened applications! To open applications, use the start-application subcommand.")
+			os.Exit(1)
+		}
+		applicationID = string(applicationIdBytes)
+	}
+
+	service, err := forms.NewService(context.Background(), option.WithHTTPClient(client))
+	if err != nil {
+		panic(err)
+	}
+
+	nameQuestionID := ""
+	positionsQuestionID := ""
+	{
+		applicationForm, err := service.Forms.Get(applicationID).Do()
+		if err != nil {
+			panic(err)
+		}
+		for _, item := range applicationForm.Items {
+			if item.Title == "Name" && item.QuestionItem != nil && item.QuestionItem.Question != nil && item.QuestionItem.Question.TextQuestion != nil {
+				nameQuestionID = item.QuestionItem.Question.QuestionId
+			}
+			if item.Title == "Positions" && item.QuestionItem != nil && item.QuestionItem.Question != nil && item.QuestionItem.Question.ChoiceQuestion != nil {
+				positionsQuestionID = item.QuestionItem.Question.QuestionId
+			}
+		}
+
+		if nameQuestionID == "" || positionsQuestionID == "" {
+			missing := ""
+			if nameQuestionID == "" {
+				missing += "Name "
+			}
+			if positionsQuestionID == "" {
+				missing += "Positions "
+			}
+			fmt.Println("Invalid application form; missing questions: " + missing)
+			os.Exit(1)
+		}
+	}
+
+	applicantsByPosition := make(map[string][]string)
+	// {email, name} tuple
+	ineligibleApplicants := [][2]string{}
+	{
+		applicantResponses, err := service.Forms.Responses.List(applicationID).Do()
+		if err != nil {
+			panic(err)
+		}
+		if applicantResponses.NextPageToken != "" {
+			fmt.Println("There are more than " + fmt.Sprint(len(applicantResponses.Responses)) + " responses! This program cannot process more than 5000 responses.")
+			os.Exit(1)
+		}
+		for _, resp := range applicantResponses.Responses {
+			isEligibleApplicant := false
+			for _, eligibleApplicant := range eligibleApplicants {
+				if eligibleApplicant == resp.RespondentEmail {
+					isEligibleApplicant = true
+				}
+			}
+
+			applicantName := resp.Answers[nameQuestionID].TextAnswers.Answers[0].Value
+			applicantPositions := []string{}
+			for _, textAnswer := range resp.Answers[positionsQuestionID].TextAnswers.Answers {
+				applicantPositions = append(applicantPositions, textAnswer.Value)
+			}
+
+			if !isEligibleApplicant {
+				ineligibleApplicants = append(ineligibleApplicants, [2]string{resp.RespondentEmail, applicantName})
+			} else {
+				for _, position := range applicantPositions {
+					applicantsByPosition[position] = append(applicantsByPosition[position], applicantName)
+				}
+			}
+		}
+	}
+
+	if len(ineligibleApplicants) != 0 {
+		fmt.Println("Ineligible Applicants:")
+		for _, tuple := range ineligibleApplicants {
+			fmt.Println("\t- " + tuple[1] + " <" + tuple[0] + ">")
+		}
+		fmt.Print("Press [Enter] to ignore these applicants, or [Ctrl-C] to address this issue and re-run this command again later: ")
+		fmt.Scanln()
+		fmt.Println()
+	}
+
+	// construct form
+	form, err := service.Forms.Create(&forms.Form{
+		Info: &forms.Info{
+			Title:         electionConfig.Name + " Ballot",
+			DocumentTitle: electionConfig.Name + " Ballot",
+		},
+	}).Do()
+	if err != nil {
+		panic(err)
+	}
+
+	requests := []*forms.Request{}
+	for positionIdx, position := range electionConfig.Positions {
+		rows := []*forms.Question{}
+		for _, applicant := range applicantsByPosition[position.Name] {
+			rows = append(rows, &forms.Question{
+				RowQuestion: &forms.RowQuestion{
+					Title: applicant,
+				},
+			})
+		}
+		requests = append(requests, &forms.Request{
+			CreateItem: &forms.CreateItemRequest{
+				Item: &forms.Item{
+					Title:       position.Name,
+					Description: position.Description + " \n\nScore each candidate from 0-3, with 3 expressing approval and 0 expressing disapproval. You do not have to fill in every row; blank rows will be treated like a 0.",
+					QuestionGroupItem: &forms.QuestionGroupItem{
+						Grid: &forms.Grid{
+							Columns: &forms.ChoiceQuestion{
+								Options: []*forms.Option{
+									{Value: "0"},
+									{Value: "1"},
+									{Value: "2"},
+									{Value: "3"},
+								},
+								Type: "RADIO",
+							},
+						},
+						Questions: rows,
+					},
+				},
+				Location: &forms.Location{Index: int64(positionIdx), ForceSendFields: []string{"Index"}},
+			},
+		})
+	}
+
+	scoreDescription := "TODO"
+
+	requests = append(requests, &forms.Request{
+		UpdateFormInfo: &forms.UpdateFormInfoRequest{
+			Info: &forms.Info{
+				Description: electionConfig.VoteDescription + "\n\n" + scoreDescription,
+			},
+			UpdateMask: "description",
+		},
+	})
+
+	_, err = service.Forms.BatchUpdate(form.FormId, &forms.BatchUpdateFormRequest{Requests: requests}).Do()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println()
+	fmt.Println("Ballot Form URL: " + "https://docs.google.com/forms/d/" + form.FormId)
+	fmt.Println("At this point, do the following on ballot form:")
+	fmt.Println("\t- Turn on 'Collect email addresses'")
+	fmt.Println("\t- Turn on 'Allow response editing'")
+	fmt.Println("\t- Turn on 'Limit to 1 response'")
+	fmt.Println("Also:")
+	fmt.Println("\t- Close the application form")
+	fmt.Print("Press [Enter] when you are done with the above: ")
+	fmt.Scanln()
+	fmt.Println()
+	fmt.Println("As a reminder, do NOT share the raw results with anyone, as this will compromise the anonymity of the voting process.")
+	fmt.Print("Press [Enter] to confirm: ")
+	fmt.Scanln()
+
+	f, err := os.Create("state/ballot.txt")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	io.WriteString(f, form.FormId)
+
+	sendWebhook(
+		"<@&" + fmt.Sprint(discordConfig.RoleID) + "> Voting for the " + electionConfig.Name + " has begun! Fill out this form before the deadline to have your vote counted: " + form.ResponderUri + "\n\n" +
+			"All votes are **anonymous**, so please vote for people that you feel are well suited for the position.\n\n" +
+			"Make sure you enter one of the following addresses into the \"Email\" field. **Entering an unlisted email may result in your vote being uncounted.**\n```\n" + strings.Join(eligibleVoters, "\n") + "\n```",
+	)
+	sendWebhook("BTW: Remember that your election opponents, like a match opponent, may (will) be your alliance partner (team member).")
+
+	fmt.Println("You're all set!")
+	os.Exit(0)
+}
+
 func handle_start_appliction(client *http.Client) {
 	// sanity check
 	if _, err := os.Stat("state/application.txt"); err == nil {
@@ -109,8 +300,8 @@ message:
 	fmt.Println("")
 	fmt.Println("Form URL: " + formEditURL)
 	fmt.Println("At this point (since Google is kinda poopy and doesn't have a complete Forms API)\n\t - Turn on 'Collect email addresses'\n\t - Turn on 'Allow response editing'\n\t - Turn on 'Limit to 1 response'\n\t - Link a spreadsheet & make that spreadsheet publicly viewable")
-	fmt.Print("When you are done, press Enter:")
-	fmt.Scanf("%s\n")
+	fmt.Print("When you are done, press [Enter]: ")
+	fmt.Scanln()
 
 	form, err = service.Forms.Get(form.FormId).Do()
 	if err != nil {
@@ -173,6 +364,7 @@ func main() {
 		RedirectURL:  "http://127.0.0.1:4444/redirect",
 		Scopes: []string{
 			"https://www.googleapis.com/auth/forms.body",
+			"https://www.googleapis.com/auth/forms.responses.readonly",
 			"https://www.googleapis.com/auth/spreadsheets",
 		},
 		Endpoint: google.Endpoint,
@@ -200,7 +392,8 @@ func main() {
 				go handle_start_appliction(client)
 				io.WriteString(w, "Authorized! Return to your terminal please :)")
 			case "start-vote":
-				panic("unimplemented")
+				go handle_start_vote(client)
+				io.WriteString(w, "Authorized! Return to your terminal please :)")
 			case "end-vote":
 				panic("unimplemented")
 			}

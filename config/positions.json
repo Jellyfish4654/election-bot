@@ -1,7 +1,7 @@
 {
     "name": "2022 Jellyfish Election",
     "application_description": "When selecting the positions you wish to run for, keep in mind the requirements of the board position you are applying for. Please do not apply for positions you would not be comfortable carrying out. Requirements can be found in the club constitution, which should be publicly available in the team folder.",
-    "vote_description": "These elections will be determined using approval voting, which is superior to first-past-the-post. Rather than vote for your favorite candidate, vote for all candidates that would be suitable for a position. You may vote for any number of candidates. The candidate who receives the most votes for each position wins.\n\nWhen voting, consider each candidate's ability to carry out the responsibilities of a position, shown on this form.\n\nYour email address will be collected to ensure all voters are members of the team; all ballots will remain confidential.",
+    "vote_description": "When voting, consider each candidate's ability to carry out the responsibilities of a position, shown on this form.\n\nYour email address will be collected to ensure all voters are members of the team; however, all ballots will remain anonymous.",
 
     "positions": [{
         "name": "Build President",
