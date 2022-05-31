@@ -44,7 +44,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	eligibleVoters := strings.Split(string(votersBytes), "\n")
+	eligibleVoters = strings.Split(string(votersBytes), "\n")
 	for i, eligibleVoter := range eligibleVoters {
 		eligibleVoters[i] = strings.TrimSpace(eligibleVoter)
 	}
