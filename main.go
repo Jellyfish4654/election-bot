@@ -168,7 +168,9 @@ func handle_start_vote(client *http.Client) {
 		})
 	}
 
-	scoreDescription := "TODO"
+	scoreDescription := "This election uses score voting. During the voting process, each voter scores each candidate from 0-3 based on how suited to the position the voter thinks the candidate is. " +
+		"After votes are in, scores are added up and whichever candidate has the most points is elected. If there is a tie between two or more candidates, there will be a runoff election for that position.\n\n" +
+		"To maximize the value of your vote, it is recommended to score 3 for at least one candidate per position."
 
 	requests = append(requests, &forms.Request{
 		UpdateFormInfo: &forms.UpdateFormInfoRequest{
@@ -208,7 +210,7 @@ func handle_start_vote(client *http.Client) {
 
 	sendWebhook(
 		"<@&" + fmt.Sprint(discordConfig.RoleID) + "> Voting for the " + electionConfig.Name + " has begun! Fill out this form before the deadline to have your vote counted: " + form.ResponderUri + "\n\n" +
-			"All votes are **anonymous**, so please vote for people that you feel are well suited for the position.\n\n" +
+			"All votes are **anonymous**, so please vote for people that you feel are well suited for the position.\nTo maximize the value of your vote, it is recommended to **score 3 for at least one candidate per position**.\nYou may edit your vote anytime before the deadline.\n\n" +
 			"Make sure you enter one of the following addresses into the \"Email\" field. **Entering an unlisted email may result in your vote being uncounted.**\n```\n" + strings.Join(eligibleVoters, "\n") + "\n```",
 	)
 	sendWebhook("BTW: Remember that your election opponents, like a match opponent, may (will) be your alliance partner (team member).")
