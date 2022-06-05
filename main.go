@@ -432,7 +432,7 @@ func handleEndVote(client *http.Client) {
 	tie := ""
 	tiers := []string{}
 	for positionIdx, position := range electionConfig.Positions {
-		colData = append(colData, &sheets.DimensionProperties{PixelSize: 256})
+		colData = append(colData, &sheets.DimensionProperties{PixelSize: 192})
 		colData = append(colData, &sheets.DimensionProperties{PixelSize: 32})
 
 		type candidateTuple struct {
@@ -504,7 +504,10 @@ func handleEndVote(client *http.Client) {
 			Title: electionConfig.Name + " Results",
 		},
 		Sheets: []*sheets.Sheet{{
-			Properties: &sheets.SheetProperties{Title: "Results"},
+			Properties: &sheets.SheetProperties{Title: "Results", GridProperties: &sheets.GridProperties{
+				RowCount:    int64(len(rowData)),
+				ColumnCount: int64(len(electionConfig.Positions)) * 2,
+			}},
 			Data: []*sheets.GridData{{
 				RowData:        rowData,
 				ColumnMetadata: colData,
