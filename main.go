@@ -567,8 +567,8 @@ func handleEndVote(client *http.Client) {
 		})
 	}
 
-	sendWebhookEmbed("<@&"+fmt.Sprint(discordConfig.RoleID)+"> Results are out! Remember that no matter who wins, "+
-		"you're all part of the same team.", embed)
+	sendWebhookEmbed("<@&"+fmt.Sprint(discordConfig.RoleID)+"> Results are out! Remember that **no matter who wins, "+
+		"you're all part of the same team**.", embed)
 
 	fmt.Println("As a reminder, DO NOT share the raw results (who voted for who) with anyone, as that would compromise the secrecy of the ballot.")
 	fmt.Print("Press [Enter] if you understand: ")
