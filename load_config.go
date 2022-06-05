@@ -11,6 +11,7 @@ import (
 type DiscordConfig struct {
 	Webhook string `json:"webhook"`
 	RoleID  uint64 `json:"role_id"`
+	BoardID uint64 `json:"board_id"`
 }
 
 type Config struct {
@@ -66,6 +67,32 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+type DiscordField struct {
+	Name   string `json:"name"`
+	Value  string `json:"value"`
+	Inline bool   `json:"inline"`
+}
+
+type DiscordEmbed struct {
+	Title       string          `json:"title"`
+	Description string          `json:"description"`
+	URL         string          `json:"url"`
+	Color       uint32          `json:"color"`
+	Fields      []*DiscordField `json:"fields"`
+}
+
+func sendWebhookEmbed(text string, embed *DiscordEmbed) {
+	req, err := json.Marshal(map[string]interface{}{
+		"username": "Election Bot",
+		"content":  text,
+		"embeds":   []*DiscordEmbed{embed},
+	})
+	if err != nil {
+		panic(err)
+	}
+	http.Post(discordConfig.Webhook, "application/json", bytes.NewReader(req))
 }
 
 func sendWebhook(text string) {

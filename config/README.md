@@ -8,3 +8,4 @@ Specifically, it contains:
  - `discord.json` - a JSON object with fields:
     - `webhook`, string - discord webhook URL
     - `role_id`, number - the ID of the Robotics role
+    - `board_id`, number - the ID of the Robotics Board role
