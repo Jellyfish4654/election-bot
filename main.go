@@ -551,13 +551,26 @@ func handleEndVote(client *http.Client) {
 		Inline: false,
 	})
 	embed.Fields = append(embed.Fields, &DiscordField{
-		Name:   "Voters",
+		Name:   "Votes",
 		Value:  fmt.Sprint(numberEligibleVoters),
-		Inline: false,
+		Inline: true,
 	})
+
+	if len(ineligibleVoters) != 0 {
+		embed.Fields = append(embed.Fields, &DiscordField{
+			Name:   "Ineligible Votes",
+			Value:  fmt.Sprint(len(ineligibleVoters)),
+			Inline: true,
+		})
+	}
 
 	sendWebhookEmbed("<@&"+fmt.Sprint(discordConfig.RoleID)+"> Results are out! Remember that no matter who wins, "+
 		"you're all part of the same team.", embed)
+
+	fmt.Println("As a reminder, DO NOT share the raw results (who voted for who) with anyone, as that would compromise the secrecy of the ballot.")
+	fmt.Print("Press [Enter] if you understand: ")
+	fmt.Scanln()
+	fmt.Println()
 
 	if tie != "" {
 		fmt.Println("You're going to need to have a runoff election for " + tie + ". If there are only two candidates, it should be done using FPTP.")
